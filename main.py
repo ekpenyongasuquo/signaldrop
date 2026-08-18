@@ -78,7 +78,20 @@ async def run_analyst_agent() -> dict:
         async with ClientSession(read, write) as session:
             await session.initialize()
             result = await session.call_tool("run_query", {"query": ANOMALY_QUERY})
-            raw_text = result.content[0].text if result.content else "{}"
+
+            # Surface real MCP-level errors clearly instead of letting an
+            # empty/error response crash json.loads with a useless message.
+            if getattr(result, "isError", False):
+                error_text = result.content[0].text if result.content else "unknown MCP error"
+                print(f"[run_analyst_agent] ClickHouse MCP returned an error: {error_text}")
+                raise HTTPException(502, f"ClickHouse query failed: {error_text}")
+
+            raw_text = result.content[0].text if result.content else ""
+            print(f"[run_analyst_agent] raw ClickHouse response: {raw_text!r}")
+
+            if not raw_text.strip():
+                raise HTTPException(502, "ClickHouse MCP returned an empty response -- check server logs.")
+
             parsed = json.loads(raw_text)
             if not parsed.get("rows"):
                 raise HTTPException(404, "No anomaly found in current data.")
