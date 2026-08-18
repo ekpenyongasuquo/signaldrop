@@ -40,16 +40,7 @@ CLICKHOUSE_ENV = {
     "CLICKHOUSE_MCP_SERVER_TRANSPORT": "stdio",
     "CLICKHOUSE_ALLOW_WRITE_ACCESS": "false",  # read-only for the live pipeline
 }
-import shutil
-
-# FIX: subprocess PATH resolution inside Cloud Run's container environment
-# does not reliably find the mcp-clickhouse console-script entry point the
-# way a local activated Windows venv does (that's why this worked locally
-# but crashed in Cloud Run with FileNotFoundError). Resolve the absolute
-# path explicitly, falling back to the standard pip-as-root install
-# location on python:3.11-slim.
-MCP_CLICKHOUSE_PATH = shutil.which("mcp-clickhouse") or "/usr/local/bin/mcp-clickhouse"
-CLICKHOUSE_SERVER_PARAMS = StdioServerParameters(command=MCP_CLICKHOUSE_PATH, args=[], env=CLICKHOUSE_ENV)
+CLICKHOUSE_SERVER_PARAMS = StdioServerParameters(command="mcp-clickhouse", args=[], env=CLICKHOUSE_ENV)
 
 GEMINI_PROJECT = os.environ["GOOGLE_CLOUD_PROJECT"]
 GEMINI_LOCATION = os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
